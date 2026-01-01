@@ -1,50 +1,56 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useMemo } from 'react';
 import { AppShell } from '../../../components/app-shell';
 import { MetadataDisplay } from '../../../components/metadata-display';
-import { useForensicStore } from '../../../lib/hooks/use-forensic-store';
+import { useAnalysis } from '../../../lib/hooks/queries/use-analyses';
 import { FileAnalysis } from '../../../lib/types';
+import { FileSearchRecord } from '../../../lib/types/database';
 import Link from 'next/link';
 import { FiArrowLeft, FiDownload, FiFileText } from 'react-icons/fi';
 import { useRouter } from 'next/navigation';
+
+// Adapter function to convert FileSearchRecord to FileAnalysis
+function toFileAnalysis(record: FileSearchRecord): FileAnalysis {
+  return {
+    id: record.id,
+    timestamp: new Date(record.analyzedAt).getTime(),
+    file: {
+      name: record.fileName,
+      size: record.fileSize,
+      type: record.fileType,
+      lastModified: new Date(record.analyzedAt).getTime(),
+    },
+    hash: {
+      md5: '', // Not stored in search index
+      sha256: record.fileHash,
+    },
+    metadata: {}, // Metadata is flattened in search index
+    mimeType: record.fileType,
+    fileSignatureMatch: true,
+  };
+}
 
 export default function AnalysisPage({ params }: { params: Promise<{ id: string }> }) {
   const unwrappedParams = React.use(params);
   const { id } = unwrappedParams;
   const router = useRouter();
-  const [analysis, setAnalysis] = useState<FileAnalysis | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const { selectAnalysis, generateAnalysisReport } = useForensicStore();
 
-  useEffect(() => {
-    const loadAnalysis = async () => {
-      try {
-        await selectAnalysis(id);
-      } catch (error) {
-        console.error("Error loading analysis:", error);
-        router.push("/dashboard");
-      } finally {
-        setIsLoading(false);
-      }
-    };
+  const { data: analysisData, isLoading, isError } = useAnalysis(id);
 
-    loadAnalysis();
-  }, [id, selectAnalysis, router]);
-
-  // Update our local state when the selected analysis changes
-  const { selectedAnalysis } = useForensicStore();
-  
-  useEffect(() => {
-    if (selectedAnalysis) {
-      setAnalysis(selectedAnalysis);
-    }
-  }, [selectedAnalysis]);
+  // Convert FileSearchRecord to FileAnalysis
+  const analysis = useMemo(() =>
+    analysisData ? toFileAnalysis(analysisData) : null,
+    [analysisData]
+  );
 
   const handleGenerateReport = async () => {
     if (!analysis) return;
-    
+
     try {
+      // Import the report generator
+      const { generateReport } = await import('../../../lib/services/report-generator');
+
       const reportOptions = {
         title: `Analysis Report: ${analysis.file.name}`,
         includeMetadata: true,
@@ -53,14 +59,14 @@ export default function AnalysisPage({ params }: { params: Promise<{ id: string 
         examinerName: "", // Could be populated from user profile in a full implementation
         notes: "",
       };
-      
-      const reportBlob = await generateAnalysisReport(analysis.id, reportOptions);
-      
+
+      const reportBlob = await generateReport(analysis, reportOptions);
+
       // Create a download link for the report
       const url = URL.createObjectURL(reportBlob);
       const a = document.createElement("a");
       a.href = url;
-      a.download = `analysis_report_${analysis.id}.pdf`;
+      a.download = `analysis_report_${analysis.file.name}.pdf`;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);

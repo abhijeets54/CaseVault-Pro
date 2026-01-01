@@ -1,17 +1,43 @@
 "use client";
 
-import { useState, useEffect } from 'react';
-import { useForensicStore } from '@/lib/hooks/use-forensic-store';
+import { useState, useEffect, useMemo } from 'react';
+import { useAnalyses, useDeleteAnalysis } from '@/lib/hooks/queries/use-analyses';
 import { AnalysisHistoryTable } from '@/components/analysis-history-table';
-import { FileMetadata } from '@/lib/types';
+import { FileMetadata, FileAnalysis } from '@/lib/types';
+import { FileSearchRecord } from '@/lib/types/database';
 import Link from 'next/link';
 import { FiUpload, FiFilter, FiSearch, FiX } from 'react-icons/fi';
 import { AppShell } from '@/components/app-shell';
 import { useToast } from '@/lib/hooks/use-toast';
 
+// Adapter function to convert FileSearchRecord to FileAnalysis
+function toFileAnalysis(record: FileSearchRecord): FileAnalysis {
+  return {
+    id: record.id,
+    timestamp: new Date(record.analyzedAt).getTime(),
+    file: {
+      name: record.fileName,
+      size: record.fileSize,
+      type: record.fileType,
+      lastModified: new Date(record.analyzedAt).getTime(),
+    },
+    hash: {
+      md5: '', // Not stored in search index, will need to fetch from COC if needed
+      sha256: record.fileHash,
+    },
+    metadata: {}, // Metadata is flattened in search index
+    mimeType: record.fileType,
+    fileSignatureMatch: true, // Assume true, can enhance later
+  };
+}
+
 export default function AnalysisPage() {
-  const { analyses, deleteAnalysis } = useForensicStore();
+  const { data: analysesData = [], isLoading } = useAnalyses();
+  const deleteAnalysisMutation = useDeleteAnalysis();
   const { addToast } = useToast();
+
+  // Convert FileSearchRecord[] to FileAnalysis[]
+  const analyses = useMemo(() => analysesData.map(toFileAnalysis), [analysesData]);
   const [filteredAnalyses, setFilteredAnalyses] = useState(analyses);
   const [searchTerm, setSearchTerm] = useState('');
   const [sortConfig, setSortConfig] = useState<{
@@ -104,10 +130,10 @@ export default function AnalysisPage() {
   // Step 2: Execute deletion when confirmed
   const confirmDeletion = async () => {
     if (!deleteConfirmation) return;
-    
+
     try {
-      await deleteAnalysis(deleteConfirmation.id);
-      
+      await deleteAnalysisMutation.mutateAsync(deleteConfirmation.id);
+
       addToast({
         title: 'Analysis deleted',
         description: `Analysis for "${deleteConfirmation.fileName}" has been removed`,
@@ -116,7 +142,7 @@ export default function AnalysisPage() {
       });
     } catch (error) {
       console.error('Error deleting analysis:', error);
-      
+
       addToast({
         title: 'Error',
         description: 'Failed to delete analysis. Please try again.',
@@ -145,6 +171,14 @@ export default function AnalysisPage() {
       backgroundVariant="grid"
     >
       <div className="container mx-auto px-4 py-6">
+        {isLoading && (
+          <div className="flex justify-center items-center py-12">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-forensic"></div>
+          </div>
+        )}
+
+        {!isLoading && (
+          <>
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6">
           <h1 className="text-2xl font-bold text-gray-800 mb-4 sm:mb-0">Analysis History</h1>
           <Link
@@ -288,6 +322,8 @@ export default function AnalysisPage() {
               Upload File
             </Link>
           </div>
+        )}
+          </>
         )}
       </div>
     </AppShell>
