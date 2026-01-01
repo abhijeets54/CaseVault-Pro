@@ -8,8 +8,12 @@ import ClientLayout from "@/components/client-layout";
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "Digital Evidence Metadata Viewer",
-  description: "A forensic tool for analyzing files and extracting metadata",
+  title: "CaseVault Pro - Enterprise Evidence Intelligence Platform",
+  description: "Professional forensics tool for law enforcement, legal teams, and compliance. Secure evidence analysis with cryptographic chain of custody.",
+  icons: {
+    icon: '/logo.svg',
+    apple: '/logo.svg',
+  },
 };
 
 export default function RootLayout({

@@ -4,19 +4,22 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "../lib/utils";
 import {
-  FiHome,
-  FiUpload,
-  FiFilePlus,
-  FiList,
-  FiArchive,
-  FiFileText,
-  FiLogOut,
-  FiMenu,
-  FiX
-} from "react-icons/fi";
+  Home,
+  Upload,
+  FileSearch,
+  History,
+  FolderOpen,
+  FileText,
+  LogOut,
+  Menu,
+  X,
+  Shield,
+  Search,
+  Tags
+} from "lucide-react";
 import { useState, useEffect } from "react";
 import { SignOutButton } from "@clerk/nextjs";
-import { Icon } from "./ui/icon";
+import { CaseVaultLogoCompact } from "./ui/casevault-logo";
 
 interface SidebarLinkProps {
   href: string;
@@ -33,9 +36,9 @@ const SidebarLink = ({ href, label, icon, onClick }: SidebarLinkProps) => {
     <Link
       href={href}
       className={cn(
-        "flex items-center gap-3 rounded-md px-3 py-2.5 transition-colors",
-        "text-gray-700 hover:text-forensic hover:bg-blue-50",
-        isActive && "bg-blue-50 text-forensic font-medium"
+        "flex items-center gap-3 rounded-lg px-3 py-2.5 transition-all",
+        "text-gray-300 hover:text-white hover:bg-brand-secondary/20",
+        isActive && "bg-brand-secondary text-white font-medium shadow-lg shadow-brand-secondary/50"
       )}
       onClick={onClick}
       aria-label={label}
@@ -83,12 +86,12 @@ export const Sidebar = () => {
       {/* Mobile Sidebar Toggle Button */}
       <div className="fixed top-3 sm:top-4 left-3 sm:left-4 z-40 md:hidden">
         <button
-          className="p-2 rounded-md bg-white shadow-md border border-gray-200 text-gray-700 focus:outline-none focus:ring-2 focus:ring-forensic focus:ring-opacity-50"
+          className="p-2 rounded-lg bg-brand-darkCard shadow-lg border border-brand-darkBorder text-white focus:outline-none focus:ring-2 focus:ring-brand-secondary"
           onClick={toggleSidebar}
           aria-label={isOpen ? "Close sidebar" : "Open sidebar"}
           aria-expanded={isOpen}
         >
-          {isOpen ? <Icon icon={FiX} size={18} /> : <Icon icon={FiMenu} size={18} />}
+          {isOpen ? <X size={20} /> : <Menu size={20} />}
         </button>
       </div>
 
@@ -104,66 +107,81 @@ export const Sidebar = () => {
       {/* Sidebar */}
       <aside
         className={cn(
-          "fixed top-0 left-0 z-40 h-full w-64 bg-white border-r border-gray-200 shadow-md transition-transform duration-300 transform",
+          "fixed top-0 left-0 z-40 h-full w-64 bg-brand-darkBg border-r border-brand-darkBorder shadow-xl transition-transform duration-300 transform",
           "md:translate-x-0 md:sticky flex flex-col",
           isOpen ? "translate-x-0" : "-translate-x-full"
         )}
       >
         {/* Logo and App Title */}
-        <div className="h-14 sm:h-16 flex items-center justify-center border-b border-gray-200">
-          <h1 className="text-lg sm:text-xl font-semibold text-forensic">
-            Digital Evidence Viewer
-          </h1>
+        <div className="h-16 flex items-center justify-center border-b border-brand-darkBorder bg-brand-darkCard">
+          <CaseVaultLogoCompact size={36} />
+          <div className="ml-3">
+            <div className="text-base font-bold text-white">CaseVault</div>
+            <div className="text-xs text-brand-accent font-semibold">Pro</div>
+          </div>
         </div>
 
         {/* Navigation Links */}
-        <nav className="flex-1 px-4 py-4 sm:py-6 space-y-1 overflow-y-auto">
+        <nav className="flex-1 px-3 py-6 space-y-1 overflow-y-auto">
           <SidebarLink
             href="/dashboard"
             label="Dashboard"
-            icon={<Icon icon={FiHome} />}
+            icon={<Home size={18} />}
             onClick={closeSidebar}
           />
           <SidebarLink
             href="/upload"
-            label="Upload File"
-            icon={<Icon icon={FiUpload} />}
+            label="Upload Evidence"
+            icon={<Upload size={18} />}
             onClick={closeSidebar}
           />
           <SidebarLink
             href="/analysis"
             label="Analysis"
-            icon={<Icon icon={FiFilePlus} />}
-            onClick={closeSidebar}
-          />
-          <SidebarLink
-            href="/history"
-            label="History"
-            icon={<Icon icon={FiList} />}
+            icon={<FileSearch size={18} />}
             onClick={closeSidebar}
           />
           <SidebarLink
             href="/cases"
-            label="Case Management"
-            icon={<Icon icon={FiArchive} />}
+            label="Cases"
+            icon={<FolderOpen size={18} />}
+            onClick={closeSidebar}
+          />
+          <div className="my-2 border-t border-brand-darkBorder"></div>
+          <SidebarLink
+            href="/chain-of-custody"
+            label="Chain of Custody"
+            icon={<Shield size={18} />}
+            onClick={closeSidebar}
+          />
+          <SidebarLink
+            href="/search"
+            label="Search"
+            icon={<Search size={18} />}
+            onClick={closeSidebar}
+          />
+          <SidebarLink
+            href="/tags"
+            label="Tags"
+            icon={<Tags size={18} />}
             onClick={closeSidebar}
           />
           <SidebarLink
             href="/reports"
             label="Reports"
-            icon={<Icon icon={FiFileText} />}
+            icon={<FileText size={18} />}
             onClick={closeSidebar}
           />
         </nav>
 
         {/* User Section */}
-        <div className="p-4 border-t border-gray-200">
+        <div className="p-3 border-t border-brand-darkBorder">
           <SignOutButton>
             <button
-              className="flex items-center gap-2 text-sm text-gray-700 hover:text-forensic transition-colors w-full rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-forensic focus:ring-opacity-50"
+              className="flex items-center gap-2 text-sm text-gray-300 hover:text-white transition-colors w-full rounded-lg px-3 py-2 hover:bg-brand-danger/20 focus:outline-none focus:ring-2 focus:ring-brand-danger"
               aria-label="Sign out"
             >
-              <Icon icon={FiLogOut} size={18} />
+              <LogOut size={18} />
               <span>Sign Out</span>
             </button>
           </SignOutButton>

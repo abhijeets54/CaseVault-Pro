@@ -1,0 +1,9 @@
+Evidence_ID,Date,Time_UTC,Activity,Officer,Badge,Notes
+EV-2025-0001,2025-12-22,15:30,Collected,Officer James Johnson,NYC-3421,Knife collected from kitchen counter
+EV-2025-0001,2025-12-22,16:45,Transported,Officer James Taylor,NYC-3921,Delivered to forensic lab
+EV-2025-0001,2025-12-23,09:00,Analyzed,Dr. Robert Hayes,FORENSIC-001,Fingerprint analysis complete
+EV-2025-0002,2025-12-22,15:45,Collected,Officer Sarah Chen,NYC-3156,Samsung phone collected from nightstand
+EV-2025-0002,2025-12-22,17:00,Transported,Officer James Taylor,NYC-3921,Delivered to digital forensics
+EV-2025-0004,2025-12-23,09:30,Collected,Lab Tech Maria Davis,LAB-0847,DNA swab from doorknob
+EV-2025-0004,2025-12-23,10:00,Analyzed,Dr. Elena Vasquez,DNA-001,DNA extraction and analysis begun
+EV-2025-0004,2025-12-23,15:00,Results Complete,Dr. Elena Vasquez,DNA-001,MATCH - John Doe confirmed

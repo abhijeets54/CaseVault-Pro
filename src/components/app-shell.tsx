@@ -26,46 +26,46 @@ export const AppShell = ({
   backgroundVariant = 'none'
 }: AppShellProps) => {
   return (
-    <div className="min-h-screen flex bg-gray-50">
+    <div className="min-h-screen flex bg-brand-darkBg">
       {/* Sidebar */}
       <Sidebar />
-      
+
       {/* Main content */}
       <div className="flex-1 flex flex-col overflow-hidden">
-        <header className="bg-white shadow-sm z-10 border-b border-gray-200">
+        <header className="bg-brand-darkCard shadow-lg z-10 border-b border-brand-darkBorder">
           <div className="px-4 sm:px-6 py-4 flex items-center justify-between">
             <div>
-              <h1 className="text-lg sm:text-xl font-medium text-gray-900">
-                {pageTitle || 'Digital Evidence Metadata Viewer'}
+              <h1 className="text-lg sm:text-xl font-medium text-white">
+                {pageTitle || 'CaseVault Pro'}
               </h1>
               {pageDescription && (
-                <p className="text-sm text-gray-500 mt-1">
+                <p className="text-sm text-gray-400 mt-1">
                   {pageDescription}
                 </p>
               )}
             </div>
-            
+
             <div className="flex items-center">
               <UserButton afterSignOutUrl="/" />
             </div>
           </div>
         </header>
-        
-        <main className="flex-1 overflow-auto relative">
+
+        <main className="flex-1 overflow-auto relative bg-brand-darkBg">
           {/* Background variant */}
           {backgroundVariant !== 'none' && (
             <ForensicBackground variant={backgroundVariant} className="absolute inset-0" animate={false} />
           )}
-          
+
           {/* Page content */}
           <PageTransition>
-            <div className={cn("relative z-10 px-4 sm:px-6 py-6", className)}>
+            <div className={cn("relative z-10", className)}>
               {children}
             </div>
           </PageTransition>
-          
+
           {/* Static footer instead of animated one */}
-          <div className="relative h-1 bg-gradient-to-r from-forensic-accent/0 via-forensic/30 to-forensic-accent/0 mt-auto"></div>
+          <div className="relative h-1 bg-gradient-to-r from-transparent via-brand-secondary/30 to-transparent mt-auto"></div>
         </main>
       </div>
     </div>

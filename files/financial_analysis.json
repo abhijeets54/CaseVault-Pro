@@ -1,0 +1,23 @@
+{
+  "case_number": "CASE-20251220-0001",
+  "analysis_date": "2025-12-24",
+  "analyst": "James Cooper",
+  "findings": {
+    "suspicious_deposits": [
+      {
+        "date": "2025-12-23",
+        "amount": "$8,000",
+        "source": "Cash deposit",
+        "timing": "Day after burglary",
+        "flag": "HIGHLY SUSPICIOUS"
+      }
+    ],
+    "debt_analysis": {
+      "total_debt": "$42,500",
+      "credit_cards": "$28,000",
+      "monthly_interest": "$850",
+      "motive_indicator": "FINANCIAL DESPERATION"
+    }
+  },
+  "conclusion": "Financial analysis reveals clear motive for burglary. Suspect is carrying significant debt with delinquent accounts."
+}

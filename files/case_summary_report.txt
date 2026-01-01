@@ -1,0 +1,40 @@
+CASE SUMMARY REPORT
+CASE NUMBER: CASE-20251220-0001
+REPORT DATE: December 24, 2025
+
+CASE TITLE: Residential Burglary - 123 Main Street, New York, NY
+PRIMARY SUSPECT: John Doe (Age 32, Criminal history: 2 prior burglaries)
+ARREST DATE: December 24, 2025, 10:30 UTC
+CHARGES: Burglary in the first degree, Theft of property, Criminal possession of weapon
+ESTIMATED VALUE: $45,000
+
+EXECUTIVE SUMMARY
+On December 22, 2025, at approximately 14:30 UTC, homeowners at 123 Main Street, 
+New York, NY discovered their residence had been burglarized.
+
+Witness Jane Johnson observed a male subject matching the description of suspect 
+John Doe exiting the building at 14:30. She provided detailed description including 
+distinctive tattoo on wrist.
+
+Within 24 hours, forensic analysis linked suspect John Doe to the crime through:
+1. DNA match (99.99% probability)
+2. Fingerprint matches on knife and door frames
+3. Phone records placing suspect near scene
+4. Vehicle identification on traffic cameras
+5. Text messages with accomplice discussing "job"
+
+SUSPECT APPREHENDED: December 24, 2025 at Grand Central Terminal
+
+KEY EVIDENCE
+✓ DNA from doorknob - MATCH (99.99%)
+✓ Fingerprints on knife - MATCH (100%)
+✓ Witness identification with detailed description
+✓ Phone records showing presence near scene
+✓ Traffic camera footage of suspect vehicle
+✓ Text messages planning the burglary
+✓ $8,000 cash deposit day after burglary
+
+PROSECUTION ASSESSMENT: VERY STRONG (95%+ conviction probability)
+
+CASE STATUS: CLOSED - SUSPECT IN CUSTODY
+PROBABILITY OF CONVICTION: 90-95%

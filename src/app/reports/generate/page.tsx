@@ -1,162 +1,186 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import { AppShell } from '../../../components/app-shell';
-import { ReportForm } from '../../../components/report-form';
-import { useForensicStore } from '../../../lib/hooks/use-forensic-store';
-import { ReportOptions } from '../../../lib/types';
-import Link from 'next/link';
-import { FiArrowLeft } from 'react-icons/fi';
+import { Suspense, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
+import { useUser } from '@clerk/nextjs';
+import { AppShell } from '@/components/app-shell';
+import { ReportGeneratorForm } from '@/components/reports/report-generator-form';
+import { ReportProgress } from '@/components/reports/report-progress';
+import { useCase } from '@/lib/hooks/queries/use-cases';
+import { useGenerateReport } from '@/lib/hooks/queries/use-reports';
+import { ReportGenerator } from '@/lib/services/report-generator-v2';
+import Link from 'next/link';
+import { ArrowLeft, FileText } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { toast } from 'sonner';
 
-export default function GenerateReportPage() {
+function GenerateReportContent() {
   const searchParams = useSearchParams();
-  const analysisId = searchParams.get('id');
   const caseId = searchParams.get('caseId');
-  
-  const { 
-    selectedAnalysis, 
-    selectAnalysis, 
-    selectedCase,
-    selectCase,
-    generateAnalysisReport,
-    generateCaseReport
-  } = useForensicStore();
-  
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [isGenerating, setIsGenerating] = useState(false);
-  
-  // Determine if we're generating a report for an analysis or a case
-  const isCase = Boolean(caseId);
-  
-  // Load the resource (analysis or case)
-  useEffect(() => {
-    async function loadResource() {
-      setIsLoading(true);
-      try {
-        if (isCase && caseId) {
-          await selectCase(caseId);
-        } else if (analysisId) {
-          await selectAnalysis(analysisId);
-        } else {
-          setError('No analysis or case ID provided');
-        }
-      } catch (err) {
-        console.error('Failed to load resource:', err);
-        setError('Failed to load the requested resource');
-      } finally {
-        setIsLoading(false);
-      }
-    }
-    
-    loadResource();
-  }, [analysisId, caseId, isCase, selectAnalysis, selectCase]);
-  
-  // Generate the report
-  const handleGenerateReport = async (options: ReportOptions) => {
-    setIsGenerating(true);
+  const { user } = useUser();
+
+  const { data: caseData, isLoading: caseLoading } = useCase(caseId);
+  const generateReportMutation = useGenerateReport();
+
+  const [stage, setStage] = useState<'idle' | 'fetching' | 'generating' | 'saving' | 'complete'>('idle');
+  const [generatedFileName, setGeneratedFileName] = useState<string>('');
+
+  const handleGenerateReport = async (values: { format: 'pdf' | 'json' | 'csv'; includeCOC: boolean }) => {
+    if (!caseId || !user) return;
+
     try {
-      let reportBlob: Blob;
-      
-      if (isCase && selectedCase) {
-        reportBlob = await generateCaseReport(selectedCase.id, options);
-      } else if (selectedAnalysis) {
-        reportBlob = await generateAnalysisReport(selectedAnalysis.id, options);
-      } else {
-        throw new Error('No analysis or case selected');
-      }
-      
-      // Create a download link for the PDF
-      const url = URL.createObjectURL(reportBlob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `${options.title.replace(/\s+/g, '_')}.pdf`;
-      document.body.appendChild(a);
-      a.click();
-      
-      // Clean up
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
-    } catch (err) {
-      console.error('Failed to generate report:', err);
-      alert('Failed to generate report. Please try again.');
-    } finally {
-      setIsGenerating(false);
+      setStage('fetching');
+
+      // Generate report using the mutation
+      setStage('generating');
+      const result = await generateReportMutation.mutateAsync({
+        caseId,
+        format: values.format,
+        includeCOC: values.includeCOC,
+        userEmail: user.primaryEmailAddress?.emailAddress || 'unknown@casevault.pro',
+        userName: user.fullName || 'Unknown User',
+      });
+
+      setStage('saving');
+
+      // Download the file
+      const mimeTypes = {
+        pdf: 'application/pdf',
+        json: 'application/json',
+        csv: 'text/csv',
+      };
+
+      ReportGenerator.downloadFile(result.blob, result.fileName, mimeTypes[values.format]);
+
+      setStage('complete');
+      setGeneratedFileName(result.fileName);
+
+      toast.success('Report generated successfully!', {
+        description: `${result.fileName} has been downloaded.`,
+      });
+
+      // Reset after 3 seconds
+      setTimeout(() => {
+        setStage('idle');
+        setGeneratedFileName('');
+      }, 3000);
+    } catch (error) {
+      console.error('Failed to generate report:', error);
+      toast.error('Failed to generate report', {
+        description: error instanceof Error ? error.message : 'An unknown error occurred',
+      });
+      setStage('idle');
     }
   };
-  
-  if (isLoading) {
+
+  if (caseLoading) {
     return (
-      <AppShell>
-        <div className="flex items-center justify-center h-[60vh]">
-          <div className="flex flex-col items-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-forensic"></div>
-            <p className="mt-4 text-gray-600">Loading...</p>
-          </div>
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="flex flex-col items-center gap-3">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-brand-secondary"></div>
+          <p className="text-muted-foreground">Loading case...</p>
         </div>
-      </AppShell>
+      </div>
     );
   }
-  
-  if (error || (!selectedAnalysis && !selectedCase)) {
+
+  if (!caseData) {
     return (
-      <AppShell>
-        <div className="text-center py-12">
-          <div className="mb-4 text-red-500">
-            <svg className="mx-auto h-12 w-12" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-            </svg>
-          </div>
-          <h2 className="text-2xl font-medium text-gray-900 mb-2">Resource Not Found</h2>
-          <p className="text-gray-600 mb-6">{error || 'The requested resource could not be found.'}</p>
-          <Link 
-            href="/dashboard"
-            className="inline-flex items-center px-4 py-2 bg-forensic text-white rounded-md hover:bg-forensic-dark focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-forensic transition-colors"
-            tabIndex={0}
-            aria-label="Return to dashboard"
-          >
-            Return to Dashboard
-          </Link>
-        </div>
-      </AppShell>
-    );
-  }
-  
-  const resourceName = isCase 
-    ? selectedCase?.name 
-    : selectedAnalysis?.file.name;
-  
-  return (
-    <AppShell>
-      <div className="max-w-3xl mx-auto space-y-6">
-        {/* Back button */}
-        <Link
-          href={isCase ? `/cases/${caseId}` : `/analysis/${analysisId}`}
-          className="inline-flex items-center text-forensic hover:underline"
-          tabIndex={0}
-          aria-label={`Back to ${isCase ? 'case' : 'analysis'} details`}
-        >
-          <FiArrowLeft className="mr-1" /> Back to {isCase ? 'Case' : 'Analysis'}
+      <div className="text-center py-12">
+        <FileText className="w-16 h-16 text-muted-foreground mx-auto mb-4 opacity-50" />
+        <h2 className="text-2xl font-semibold mb-2">Case Not Found</h2>
+        <p className="text-muted-foreground mb-6">The requested case could not be found.</p>
+        <Link href="/reports">
+          <Button>
+            <ArrowLeft className="w-4 h-4 mr-2" />
+            Back to Reports
+          </Button>
         </Link>
-        
-        {/* Page header */}
-        <div className="text-center mb-6">
-          <h1 className="text-2xl font-bold text-gray-900">Generate Report</h1>
-          <p className="mt-2 text-gray-500">
-            Create a PDF report for {isCase ? 'case' : 'analysis'}: <span className="font-medium">{resourceName}</span>
-          </p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="max-w-3xl mx-auto space-y-6">
+      {/* Back button */}
+      <Link
+        href="/reports"
+        className="inline-flex items-center text-brand-secondary hover:text-brand-secondary/80 transition-colors"
+      >
+        <ArrowLeft className="w-4 h-4 mr-2" />
+        Back to Reports
+      </Link>
+
+      {/* Page header */}
+      <div className="bg-card rounded-lg border border-border p-6">
+        <div className="flex items-start gap-4">
+          <div className="flex-shrink-0">
+            <div className="w-12 h-12 rounded-lg bg-brand-secondary/10 flex items-center justify-center">
+              <FileText className="w-6 h-6 text-brand-secondary" />
+            </div>
+          </div>
+          <div className="flex-1">
+            <h1 className="text-2xl font-bold mb-1">Generate Report</h1>
+            <p className="text-muted-foreground mb-2">
+              Create a professional forensic report for case: <span className="font-medium text-foreground">{caseData.caseName}</span>
+            </p>
+            <div className="flex items-center gap-4 text-sm text-muted-foreground">
+              <span>{caseData.caseNumber}</span>
+              <span>•</span>
+              <span>{caseData.totalFiles} files</span>
+            </div>
+          </div>
         </div>
-        
-        {/* Report form */}
-        <div className="bg-white p-6 shadow-sm rounded-lg border border-gray-200">
-          <ReportForm 
-            onGenerateReport={handleGenerateReport}
-            isGenerating={isGenerating}
-            isCase={isCase}
+      </div>
+
+      {/* Report form or progress */}
+      {stage === 'idle' ? (
+        <div className="bg-card rounded-lg border border-border p-6">
+          <ReportGeneratorForm
+            onSubmit={handleGenerateReport}
+            isGenerating={generateReportMutation.isPending}
           />
         </div>
+      ) : (
+        <ReportProgress
+          stage={stage}
+          fileName={generatedFileName}
+        />
+      )}
+
+      {/* Info card */}
+      <div className="bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
+        <h3 className="text-sm font-semibold text-blue-900 dark:text-blue-100 mb-2">
+          About Report Formats
+        </h3>
+        <ul className="text-sm text-blue-800 dark:text-blue-200 space-y-1">
+          <li><strong>PDF:</strong> Formatted report with tables and chain of custody records</li>
+          <li><strong>JSON:</strong> Machine-readable format with complete case data structure</li>
+          <li><strong>CSV:</strong> Spreadsheet format with file details and COC events</li>
+        </ul>
+      </div>
+    </div>
+  );
+}
+
+export default function GenerateReportPage() {
+  return (
+    <AppShell
+      pageTitle="Generate Report"
+      pageDescription="Create professional forensic reports with chain of custody"
+      backgroundVariant="grid"
+    >
+      <div className="container mx-auto px-4 py-6">
+        <Suspense
+          fallback={
+            <div className="flex items-center justify-center min-h-[400px]">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-brand-secondary"></div>
+            </div>
+          }
+        >
+          <GenerateReportContent />
+        </Suspense>
       </div>
     </AppShell>
   );
-} 
+}

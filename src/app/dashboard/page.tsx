@@ -1,177 +1,142 @@
 'use client';
 
 import { AppShell } from "../../components/app-shell";
-import { DashboardStats } from "../../components/dashboard-stats";
-import { AnalysisHistoryTable } from "../../components/analysis-history-table";
-import { useForensicStore } from "../../lib/hooks/use-forensic-store";
+import { useCases, useCaseStats } from "@/lib/hooks/queries/use-cases";
 import { useUser } from "@clerk/nextjs";
 import Link from "next/link";
-import { FiUpload, FiFolder, FiFileText, FiBarChart2 } from "react-icons/fi";
-import { useEffect, useState } from "react";
-import { FileAnalysis } from "../../lib/types";
-import { motion } from "framer-motion";
-import { MotionCard } from "@/components/ui/motion-card";
-import { Icon } from "@/components/ui/icon";
-import { useToast } from "@/lib/hooks/use-toast";
-import { STAGGER_CHILDREN, STAGGER_ITEM } from "@/lib/utils/animations";
+import { Upload, FolderOpen, FileText, BarChart3, Shield, Search } from "lucide-react";
+import { formatBytes } from "@/lib/utils";
 
 export default function DashboardPage() {
   const { user } = useUser();
-  const { analyses, cases, deleteAnalysis } = useForensicStore();
-  const { addToast } = useToast();
-  
-  // Get most recent analyses for display
-  const [recentAnalyses, setRecentAnalyses] = useState<FileAnalysis[]>([]);
-  
-  useEffect(() => {
-    // Sort analyses by timestamp (newest first) and take the first 5
-    const sorted = [...analyses].sort((a, b) => b.timestamp - a.timestamp).slice(0, 5);
-    setRecentAnalyses(sorted);
-  }, [analyses]);
+  const { data: cases = [], isLoading: casesLoading } = useCases();
+  const { data: stats, isLoading: statsLoading } = useCaseStats();
 
-  const handleDelete = async (id: string) => {
-    if (window.confirm('Are you sure you want to delete this analysis? This action cannot be undone.')) {
-      try {
-        await deleteAnalysis(id);
-        addToast({
-          title: "Analysis deleted",
-          description: "The analysis has been removed from your history",
-          variant: "success",
-          duration: 3000,
-        });
-      } catch (error) {
-        console.error('Error deleting analysis:', error);
-        addToast({
-          title: "Error",
-          description: "Failed to delete analysis. Please try again.",
-          variant: "error",
-          duration: 5000,
-        });
-      }
-    }
-  };
-  
+  const activeCases = cases.filter((c) => c.caseStatus === "active");
+  const closedCases = cases.filter((c) => c.caseStatus === "closed");
+
   return (
-    <AppShell 
-      pageTitle={`Welcome, ${user?.firstName || 'Investigator'}`}
-      pageDescription="Dashboard overview of your digital forensics workspace"
-      backgroundVariant="grid"
-    >
-      <motion.div 
-        className="space-y-8"
-        variants={STAGGER_CHILDREN}
-        initial="initial"
-        animate="animate"
-      >
-        {/* Stats overview */}
-        <motion.div variants={STAGGER_ITEM}>
-          <DashboardStats />
-        </motion.div>
-        
-        {/* Quick action buttons */}
-        <motion.div variants={STAGGER_ITEM}>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <motion.div
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
-            >
+    <AppShell>
+      <div className="p-6 space-y-6">
+        <div>
+          <h1 className="text-3xl font-bold text-white mb-2">
+            Welcome back, {user?.firstName || "User"}
+          </h1>
+          <p className="text-gray-400">CaseVault Pro - Enterprise Evidence Intelligence Platform</p>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="bg-brand-darkCard border border-brand-darkBorder rounded-lg p-6">
+            <div className="flex items-center justify-between mb-2">
+              <h3 className="text-gray-400 text-sm font-medium">Total Cases</h3>
+              <FolderOpen className="text-brand-secondary" size={20} />
+            </div>
+            <p className="text-3xl font-bold text-white">{stats?.totalCases || 0}</p>
+            <p className="text-sm text-gray-500 mt-1">
+              {stats?.activeCases || 0} active
+            </p>
+          </div>
+
+          <div className="bg-brand-darkCard border border-brand-darkBorder rounded-lg p-6">
+            <div className="flex items-center justify-between mb-2">
+              <h3 className="text-gray-400 text-sm font-medium">Total Evidence Files</h3>
+              <FileText className="text-brand-accent" size={20} />
+            </div>
+            <p className="text-3xl font-bold text-white">{stats?.totalFiles || 0}</p>
+            <p className="text-sm text-gray-500 mt-1">
+              {formatBytes(stats?.totalSize || 0)}
+            </p>
+          </div>
+
+          <div className="bg-brand-darkCard border border-brand-darkBorder rounded-lg p-6">
+            <div className="flex items-center justify-between mb-2">
+              <h3 className="text-gray-400 text-sm font-medium">Active Cases</h3>
+              <BarChart3 className="text-brand-success" size={20} />
+            </div>
+            <p className="text-3xl font-bold text-white">{stats?.activeCases || 0}</p>
+            <p className="text-sm text-gray-500 mt-1">
+              {stats?.closedCases || 0} closed
+            </p>
+          </div>
+
+          <div className="bg-brand-darkCard border border-brand-darkBorder rounded-lg p-6">
+            <div className="flex items-center justify-between mb-2">
+              <h3 className="text-gray-400 text-sm font-medium">Chain Events</h3>
+              <Shield className="text-brand-info" size={20} />
+            </div>
+            <p className="text-3xl font-bold text-white">--</p>
+            <p className="text-sm text-gray-500 mt-1">COC tracked</p>
+          </div>
+        </div>
+
+        <div className="grid md:grid-cols-3 gap-4">
           <Link
             href="/upload"
-                className="flex items-center justify-center gap-2 px-4 py-6 bg-forensic text-white rounded-lg shadow hover:shadow-md transition-all"
-            tabIndex={0}
-            aria-label="Upload new file for analysis"
+            className="bg-brand-secondary hover:bg-brand-secondary/90 text-white rounded-lg p-6 flex items-center gap-4 transition"
           >
-                <Icon icon={FiUpload} className="w-5 h-5" />
-            <span className="font-medium">Upload File</span>
+            <Upload size={32} />
+            <div>
+              <h3 className="font-bold text-lg">Upload Evidence</h3>
+              <p className="text-sm text-white/80">Add files to a case</p>
+            </div>
           </Link>
-            </motion.div>
-          
-            <motion.div
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
-            >
-          <Link
-            href="/history"
-                className="flex items-center justify-center gap-2 px-4 py-6 bg-white text-forensic border border-forensic rounded-lg shadow hover:shadow-md transition-all"
-            tabIndex={0}
-            aria-label="View analysis history"
-          >
-                <Icon icon={FiFileText} className="w-5 h-5" />
-            <span className="font-medium">View History</span>
-          </Link>
-            </motion.div>
-          
-            <motion.div
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
-            >
+
           <Link
             href="/cases"
-                className="flex items-center justify-center gap-2 px-4 py-6 bg-white text-gray-700 border border-gray-300 rounded-lg shadow hover:shadow-md transition-all"
-            tabIndex={0}
-            aria-label="Manage cases"
+            className="bg-brand-darkCard hover:bg-brand-darkCard/80 border border-brand-darkBorder text-white rounded-lg p-6 flex items-center gap-4 transition"
           >
-                <Icon icon={FiFolder} className="w-5 h-5" />
-            <span className="font-medium">Manage Cases</span>
-          </Link>
-            </motion.div>
-        </div>
-        </motion.div>
-        
-        {/* Recent analysis */}
-        <motion.div variants={STAGGER_ITEM}>
-          <div className="flex justify-between items-center mb-4">
-            <div className="flex items-center gap-2">
-              <Icon icon={FiBarChart2} className="w-5 h-5 text-forensic" />
-            <h2 className="text-lg font-medium text-gray-900">Recent Analysis</h2>
+            <FolderOpen size={32} className="text-brand-secondary" />
+            <div>
+              <h3 className="font-bold text-lg">Manage Cases</h3>
+              <p className="text-sm text-gray-400">View all cases</p>
             </div>
-            <Link
-              href="/history"
-              className="text-sm text-forensic hover:text-forensic-dark transition-colors font-medium"
-              tabIndex={0}
-              aria-label="View all analysis history"
-            >
-              View all →
-            </Link>
-          </div>
-          
-          <MotionCard variant="forensic">
-          {recentAnalyses.length > 0 ? (
-              <AnalysisHistoryTable
-                analyses={recentAnalyses}
-                onDelete={handleDelete}
-              />
-          ) : (
-              <div className="text-center py-10">
-                <motion.div
-                  initial={{ opacity: 0, scale: 0.9 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  transition={{ duration: 0.3 }}
-                  className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-forensic/10 text-forensic mb-4"
+          </Link>
+
+          <Link
+            href="/search"
+            className="bg-brand-darkCard hover:bg-brand-darkCard/80 border border-brand-darkBorder text-white rounded-lg p-6 flex items-center gap-4 transition"
+          >
+            <Search size={32} className="text-brand-accent" />
+            <div>
+              <h3 className="font-bold text-lg">Search Evidence</h3>
+              <p className="text-sm text-gray-400">Find files</p>
+            </div>
+          </Link>
+        </div>
+
+        <div>
+          <h2 className="text-xl font-bold text-white mb-4">Recent Cases</h2>
+          {casesLoading && <div className="text-gray-400">Loading...</div>}
+          {!casesLoading && activeCases.length > 0 && (
+            <div className="grid gap-4">
+              {activeCases.slice(0, 5).map((caseItem) => (
+                <div
+                  key={caseItem.id}
+                  className="bg-brand-darkCard border border-brand-darkBorder rounded-lg p-4 hover:border-brand-secondary transition"
                 >
-                  <Icon icon={FiUpload} className="w-8 h-8" />
-                </motion.div>
-              <h3 className="text-lg font-medium text-gray-900 mb-2">No analyses yet</h3>
-              <p className="text-gray-500 mb-4">Upload a file to begin your first analysis</p>
-                <motion.div
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
-                >
-              <Link
-                href="/upload"
-                className="inline-flex items-center px-4 py-2 bg-forensic text-white rounded-md hover:bg-forensic-dark transition-colors"
-                tabIndex={0}
-                aria-label="Upload a file"
-              >
-                    <Icon icon={FiUpload} className="w-4 h-4 mr-2" />
-                Upload File
-              </Link>
-                </motion.div>
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h3 className="font-semibold text-white">{caseItem.caseName}</h3>
+                      <p className="text-sm text-gray-400">{caseItem.caseNumber}</p>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-sm text-gray-400">{caseItem.totalFiles} files</p>
+                      <p className="text-sm text-gray-500">
+                        {formatBytes(caseItem.totalSize)}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              ))}
             </div>
           )}
-          </MotionCard>
-        </motion.div>
-      </motion.div>
+          {!casesLoading && activeCases.length === 0 && (
+            <div className="bg-brand-darkCard border border-brand-darkBorder rounded-lg p-8 text-center">
+              <p className="text-gray-400">No active cases. Create your first case to get started.</p>
+            </div>
+          )}
+        </div>
+      </div>
     </AppShell>
   );
-} 
+}

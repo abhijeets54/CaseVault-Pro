@@ -1,0 +1,30 @@
+{
+  "case_number": "CASE-20251220-0001",
+  "report_date": "2025-12-24",
+  "forensic_examiner": "Dr. Robert Hayes",
+  "laboratory": "NYC Police Department - Forensic Laboratory",
+  "analyses": {
+    "DNA_Analysis": {
+      "status": "COMPLETE",
+      "specimen": "Swab from doorknob at 123 Main Street",
+      "result": "MATCH - DNA matches John Doe (suspect)",
+      "probability": "99.99%",
+      "date_tested": "2025-12-23"
+    },
+    "Fingerprint_Analysis": {
+      "status": "COMPLETE",
+      "specimens": [
+        {
+          "item": "Knife handle (EV-2025-0001)",
+          "result": "MATCH - Left thumb and index finger"
+        },
+        {
+          "item": "Door frame",
+          "result": "MATCH - Right index and middle finger"
+        }
+      ],
+      "probability": "100% (AFIS confirmed match)"
+    }
+  },
+  "conclusion": "There is overwhelming evidence linking John Doe to the burglary at 123 Main Street on December 22, 2025. DNA match 99.99%, Fingerprints 100%, Witness identification confirmed."
+}

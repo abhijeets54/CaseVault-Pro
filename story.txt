@@ -1,0 +1,1485 @@
+ CaseVault Pro - Complete Technical Implementation Guide for Claude Code
+Copy this entire document to Claude Code for automated implementation
+
+1. System Architecture Overview
+Purpose: Transform the existing df-project (Digital Evidence Metadata Viewer) into CaseVault Pro - an enterprise-grade evidence intelligence platform with cryptographic chain of custody, advanced reporting, and intelligent search capabilities.
+
+Current State:
+
+Next.js 14 with App Router
+
+Client-side file analysis (no server uploads)
+
+Basic metadata extraction and hash generation
+
+Clerk authentication
+
+IndexedDB for client storage
+
+Basic PDF report generation
+
+Target State:
+
+Complete visual rebrand (new color scheme, logo, UI components)
+
+Blockchain-style chain of custody with cryptographic signatures
+
+Professional multi-format report generation (PDF, JSON, CSV)
+
+Full-text search with advanced filtering and evidence tagging
+
+Supabase backend for persistence and multi-user support
+
+Enterprise-grade audit trails
+
+Tech Stack:
+
+Frontend: Next.js 14 (App Router), TypeScript, TailwindCSS, shadcn/ui
+
+Authentication: Clerk (existing)
+
+Database: Supabase (PostgreSQL) + IndexedDB (client-side cache)
+
+State Management: React hooks, TanStack Query (React Query v5)
+
+UI Library: shadcn/ui, Lucide icons, Radix UI primitives
+
+PDF Generation: jsPDF with autoTable plugin
+
+Cryptography: Web Crypto API (native browser)
+
+Deployment: Vercel (existing)
+
+2. Complete Rebranding Specifications
+2.1 Brand Identity: CaseVault Pro
+Old Identity (REMOVE ALL):
+
+Project Name: "df-project" / "Digital Evidence Metadata Viewer"
+
+Colors: Blue (#3B82F6), Indigo
+
+Logo: Simple shield or document icon
+
+Tagline: None
+
+New Identity (IMPLEMENT EVERYWHERE):
+
+Project Name: CaseVault Pro
+
+Tagline: "Enterprise Evidence Intelligence Platform"
+
+Positioning: Professional forensics tool for law enforcement, legal teams, and compliance
+
+Color Palette:
+
+typescript
+// Brand Colors - Use consistently across all components
+const brandColors = {
+  // Primary palette
+  primary: '#0F172A',        // Slate-900 (deep navy) - headers, CTA
+  secondary: '#7C3AED',      // Violet-600 (purple) - accents, highlights
+  accent: '#F59E0B',         // Amber-500 (gold) - badges, status
+  
+  // Semantic colors
+  success: '#10B981',        // Emerald-500 - success states
+  warning: '#F59E0B',        // Amber-500 - warnings
+  danger: '#EF4444',         // Red-500 - errors, delete actions
+  info: '#3B82F6',           // Blue-500 - informational
+  
+  // Neutrals
+  background: '#F8FAFC',     // Slate-50 - page background
+  cardBg: '#FFFFFF',         // White - card backgrounds
+  border: '#E2E8F0',         // Slate-200 - borders
+  muted: '#64748B',          // Slate-500 - muted text
+  
+  // Dark theme variants
+  darkBg: '#0F172A',         // Slate-900
+  darkCard: '#1E293B',       // Slate-800
+  darkBorder: '#334155',     // Slate-700
+}
+Typography:
+
+Primary Font: Inter (sans-serif) - body text
+
+Mono Font: JetBrains Mono - code, hashes, signatures
+
+Heading Scale: 6xl/5xl/4xl/3xl/2xl/xl/lg (Tailwind scale)
+
+Logo Design:
+
+Icon: Shield with lock symbol (security theme)
+
+Badge: Small amber dot on shield (premium indicator)
+
+Format: SVG for scalability
+
+Usage: Navbar, landing page, PDF reports, browser tab
+
+2.2 UI Component Transformations
+Navigation Bar:
+
+Dark gradient background (primary → slate-850 → primary)
+
+Logo with animated badge (pulse effect)
+
+Menu items: Dashboard, Analysis, Cases, Reports, Settings
+
+User avatar with dropdown (Clerk UserButton)
+
+Responsive hamburger menu for mobile
+
+Landing Page:
+
+Hero section: Dark gradient background with grid overlay
+
+Headline: Large, bold, gradient text effect
+
+Feature cards: 3-column grid with hover animations
+
+Call-to-action: Prominent "Start Analyzing" button
+
+Social proof section (optional): Trust badges, metrics
+
+Dashboard Layout:
+
+Sidebar navigation (collapsible on mobile)
+
+Breadcrumb navigation
+
+Page headers with action buttons
+
+Card-based content sections
+
+Responsive grid system
+
+Data Tables:
+
+shadcn DataTable with sorting, filtering, pagination
+
+Row selection with bulk actions toolbar
+
+Column visibility toggle
+
+Export options (CSV, JSON)
+
+Mobile-responsive card view
+
+Forms:
+
+shadcn Form components with react-hook-form
+
+Inline validation with error messages
+
+Field-level help tooltips
+
+Multi-step forms with progress indicator
+
+Auto-save drafts functionality
+
+3. Database Schema Requirements
+3.1 Supabase Tables Structure
+Create these tables in Supabase SQL Editor:
+
+Table 1: cases
+
+sql
+Purpose: Store investigation cases (container for evidence files)
+Fields:
+  - id: UUID (primary key)
+  - case_number: TEXT (unique, auto-generated: CASE-YYYYMMDD-XXXX)
+  - case_name: TEXT (required, max 200 chars)
+  - case_officer: TEXT (user's full name)
+  - department: TEXT (organization/agency)
+  - case_status: ENUM ('active', 'closed', 'archived')
+  - description: TEXT (case notes)
+  - total_files: INTEGER (cached count)
+  - total_size: BIGINT (bytes, cached sum)
+  - user_id: TEXT (Clerk user ID, foreign key)
+  - created_at: TIMESTAMPTZ
+  - updated_at: TIMESTAMPTZ
+  - closed_at: TIMESTAMPTZ (nullable)
+
+Indexes:
+  - idx_cases_user_id (user_id)
+  - idx_cases_case_number (case_number, unique)
+  - idx_cases_status (case_status, user_id)
+  - idx_cases_created_at (created_at DESC)
+
+Row Level Security:
+  - Users can only access their own cases
+  - Policy: auth.uid()::text = user_id
+Table 2: chain_of_custody
+
+sql
+Purpose: Immutable audit trail for all evidence interactions
+Fields:
+  - id: UUID (primary key)
+  - case_id: UUID (foreign key → cases.id, CASCADE delete)
+  - file_name: TEXT
+  - file_hash: TEXT (SHA-256)
+  - activity_type: ENUM ('uploaded', 'analyzed', 'viewed', 'exported', 'tagged', 'modified', 'deleted')
+  - user_id: TEXT (Clerk user ID)
+  - user_email: TEXT (cached from Clerk)
+  - user_full_name: TEXT (cached from Clerk)
+  - ip_address: TEXT (captured client-side via API)
+  - user_agent: TEXT (browser fingerprint)
+  - metadata: JSONB (activity-specific data)
+  - digital_signature: TEXT (SHA-256 hash of event + previous signature)
+  - previous_signature: TEXT (nullable for first event, links chain)
+  - timestamp: TIMESTAMPTZ (immutable, default NOW())
+  - created_at: TIMESTAMPTZ
+
+Indexes:
+  - idx_coc_case_id (case_id)
+  - idx_coc_file_hash (file_hash)
+  - idx_coc_timestamp (timestamp DESC)
+  - idx_coc_activity_type (activity_type)
+
+Row Level Security:
+  - Users can view COC for their cases
+  - INSERT only (no UPDATE/DELETE - immutable audit trail)
+  - Policy: case_id IN (SELECT id FROM cases WHERE user_id = auth.uid()::text)
+Table 3: evidence_tags
+
+sql
+Purpose: User-created tags for evidence categorization
+Fields:
+  - id: UUID (primary key)
+  - case_id: UUID (foreign key → cases.id, CASCADE delete)
+  - file_hash: TEXT (links to analyzed file)
+  - tag_name: TEXT (max 50 chars, e.g., "Key Evidence", "Witness Photo")
+  - tag_color: TEXT (hex color, default '#7C3AED')
+  - notes: TEXT (optional tag description)
+  - created_by: TEXT (Clerk user ID)
+  - created_at: TIMESTAMPTZ
+  - updated_at: TIMESTAMPTZ
+
+Indexes:
+  - idx_tags_case_id (case_id)
+  - idx_tags_file_hash (case_id, file_hash)
+  - idx_tags_tag_name (tag_name) for autocomplete
+
+Row Level Security:
+  - Users can manage tags in their cases
+  - Policy: case_id IN (SELECT id FROM cases WHERE user_id = auth.uid()::text)
+Table 4: file_search_index
+
+sql
+Purpose: Full-text search index for evidence files
+Fields:
+  - id: UUID (primary key)
+  - case_id: UUID (foreign key → cases.id, CASCADE delete)
+  - file_hash: TEXT (unique identifier, indexed)
+  - file_name: TEXT (original filename)
+  - file_type: TEXT (MIME type)
+  - file_size: BIGINT (bytes)
+  - file_extension: TEXT (extracted, e.g., "jpg", "pdf")
+  - metadata_text: TEXT (flattened metadata for search, includes all key-value pairs)
+  - tags: TEXT[] (array of tag names for fast filtering)
+  - analyzed_at: TIMESTAMPTZ
+  - indexed_at: TIMESTAMPTZ (for cache invalidation)
+
+Indexes:
+  - idx_search_case_id (case_id)
+  - idx_search_file_hash (file_hash, unique)
+  - idx_search_metadata_gin (to_tsvector('english', metadata_text)) - Full-text search
+  - idx_search_filename_gin (to_tsvector('english', file_name))
+  - idx_search_tags_gin (tags) - Array search
+  - idx_search_file_type (file_type)
+
+Row Level Security:
+  - Users can search their cases
+  - Policy: case_id IN (SELECT id FROM cases WHERE user_id = auth.uid()::text)
+Table 5: report_exports
+
+sql
+Purpose: Track generated reports and enable re-download
+Fields:
+  - id: UUID (primary key)
+  - case_id: UUID (foreign key → cases.id)
+  - report_type: ENUM ('pdf', 'json', 'csv')
+  - file_name: TEXT
+  - file_size: BIGINT
+  - includes_coc: BOOLEAN (whether COC was included)
+  - file_count: INTEGER (number of evidence files in report)
+  - generated_by: TEXT (Clerk user ID)
+  - generated_at: TIMESTAMPTZ
+  - download_count: INTEGER (default 0)
+  - storage_url: TEXT (Supabase Storage URL, nullable)
+
+Indexes:
+  - idx_reports_case_id (case_id)
+  - idx_reports_generated_at (generated_at DESC)
+
+Row Level Security:
+  - Users can view/download reports from their cases
+3.2 Database Functions & Triggers
+Function 1: Update case file counts
+
+sql
+Purpose: Auto-update total_files and total_size in cases table
+Trigger: AFTER INSERT/DELETE on file_search_index
+Logic: Recalculate COUNT(*) and SUM(file_size) for case_id
+Function 2: Auto-generate case number
+
+sql
+Purpose: Generate unique case numbers on insert
+Format: CASE-YYYYMMDD-XXXX (e.g., CASE-20251231-0042)
+Trigger: BEFORE INSERT on cases
+Logic: Use current date + sequential counter (stored in separate sequence table)
+Function 3: Validate COC chain integrity
+
+sql
+Purpose: Prevent chain breaks (optional database-level validation)
+Trigger: BEFORE INSERT on chain_of_custody
+Logic: Verify previous_signature matches last event's digital_signature
+4. Data Flow Architecture
+4.1 Primary User Flows
+Flow 1: Evidence Upload & Analysis
+
+text
+User uploads file(s) → Client-side hash generation (SHA-256, MD5)
+→ Extract metadata (EXIF, file properties)
+→ Display analysis results
+→ User creates/selects case
+→ Save to Supabase (file_search_index)
+→ Record COC event (activity_type: 'uploaded')
+→ IndexedDB cache for offline access
+→ Update case statistics
+Flow 2: Chain of Custody Recording
+
+text
+User action (view, export, tag, etc.)
+→ Capture event context (timestamp, user, IP)
+→ Fetch last COC signature for this file_hash
+→ Generate new signature (hash of event data + previous signature)
+→ Insert into chain_of_custody table (immutable)
+→ Return success confirmation
+Flow 3: Report Generation
+
+text
+User selects case → Choose report format (PDF/JSON/CSV)
+→ Fetch all files from file_search_index
+→ Fetch all COC events for each file
+→ Verify chain integrity (optional)
+→ Generate report (client-side for PDF, server-side for large exports)
+→ Download blob to user
+→ Save report metadata to report_exports
+→ Record COC event (activity_type: 'exported')
+Flow 4: Search & Filter
+
+text
+User enters search query
+→ Client-side debounce (300ms)
+→ Query file_search_index with full-text search
+→ Apply filters (file type, date range, tags, size)
+→ Return paginated results (20 per page)
+→ Display in data table with sorting
+→ Record COC event when user views file details
+4.2 Advanced Flow Patterns
+Pattern 1: Optimistic Updates
+
+text
+User adds tag → Immediately update UI
+→ Mutation to Supabase (background)
+→ On success: Invalidate cache
+→ On failure: Rollback UI, show error toast
+Pattern 2: Bulk Operations
+
+text
+User selects multiple files → Choose bulk action (tag, export, delete)
+→ Show confirmation dialog with count
+→ Process in batches (10 at a time to avoid rate limits)
+→ Progress indicator (X of Y completed)
+→ Record individual COC events for each file
+→ Show summary toast (success count, errors)
+Pattern 3: Real-time Collaboration (Future)
+
+text
+Supabase Realtime subscription on chain_of_custody
+→ Broadcast new COC events to other users viewing same case
+→ Update timeline UI in real-time
+→ Show notification: "New activity by [user]"
+5. Component Architecture & Hierarchy
+5.1 Page Structure (App Router)
+text
+app/
+├── (marketing)/
+│   ├── page.tsx                    # Landing page (NEW DESIGN)
+│   ├── features/page.tsx           # Features showcase
+│   └── pricing/page.tsx            # Pricing (optional)
+├── (auth)/
+│   ├── sign-in/[[...sign-in]]/page.tsx    # Clerk sign-in
+│   └── sign-up/[[...sign-up]]/page.tsx    # Clerk sign-up
+└── (dashboard)/
+    ├── layout.tsx                  # Dashboard shell (sidebar, navbar)
+    ├── dashboard/page.tsx          # Overview dashboard
+    ├── analysis/page.tsx           # File analysis (main feature)
+    ├── cases/
+    │   ├── page.tsx                # Cases list
+    │   ├── [id]/page.tsx           # Case details
+    │   └── [id]/edit/page.tsx      # Edit case
+    ├── reports/page.tsx            # Report generation
+    ├── search/page.tsx             # Global search
+    └── settings/page.tsx           # User settings
+5.2 View Components (Client Components)
+text
+components/views/
+├── LandingView.tsx                 # Hero, features, CTA (NEW)
+├── AnalysisView.tsx                # Main file analysis interface
+├── CaseManagementView.tsx          # Cases CRUD operations
+├── ReportGenerationView.tsx        # Report builder UI
+└── SearchView.tsx                  # Advanced search interface
+5.3 Feature Component Hierarchy
+Feature 1: Chain of Custody
+
+text
+ChainOfCustodyPanel (parent)
+├── ChainIntegrityBadge             # Verified/Compromised status
+├── ChainTimeline                   # Vertical timeline of events
+│   └── ChainEventCard[]            # Individual event display
+│       ├── EventIcon               # Activity type icon
+│       ├── EventDetails            # User, timestamp, IP
+│       └── SignatureDisplay        # Truncated hash with copy
+├── ChainVerificationButton         # Re-verify integrity
+└── DownloadCertificateButton       # Export COC as JSON/PDF
+Feature 2: Report Generation
+
+text
+ReportGeneratorView (parent)
+├── CaseSelector                    # Dropdown to choose case
+├── ReportConfigForm                # Options panel
+│   ├── FormatToggle                # PDF/JSON/CSV radio
+│   ├── IncludeCOCCheckbox          # Include chain of custody
+│   ├── DateRangeFilter             # Optional date filter
+│   └── FileSelectionList           # Multi-select files
+├── ReportPreview                   # Visual preview (PDF only)
+└── GenerateActions
+    ├── GenerateButton              # Primary action
+    ├── SaveTemplateButton          # Save config for reuse
+    └── ScheduleButton              # Schedule recurring (future)
+Feature 3: Search & Tagging
+
+text
+SearchPanel (parent)
+├── SearchBar                       # Input with autocomplete
+│   └── SearchSuggestions           # Recent searches, suggested tags
+├── FilterToolbar                   # Advanced filters
+│   ├── FileTypeFilter              # Multi-select MIME types
+│   ├── DateRangePicker             # From/To dates
+│   ├── SizeRangeSlider             # Min/Max file size
+│   └── TagFilter                   # Multi-select existing tags
+├── SearchResults                   # Results container
+│   ├── ResultsHeader               # Count, sort options
+│   ├── ResultsList                 # Virtualized list (react-window)
+│   │   └── ResultCard[]            # File preview cards
+│   │       ├── FileThumbnail       # Icon/preview
+│   │       ├── FileMetadata        # Name, size, type
+│   │       ├── TagBadges[]         # Assigned tags
+│   │       └── QuickActions        # View, Tag, Export
+│   └── Pagination                  # Page navigation
+└── BulkTaggingDrawer               # Slide-out panel
+    ├── SelectedFilesCount
+    ├── TagCreationForm             # Name, color picker
+    ├── ExistingTagsList            # Select from existing
+    └── ApplyButton
+5.4 Shared UI Components Library
+text
+components/ui/
+├── forms/
+│   ├── case-form.tsx               # Create/Edit case form
+│   ├── tag-form.tsx                # Tag creation form
+│   └── search-form.tsx             # Advanced search form
+├── display/
+│   ├── file-card.tsx               # Evidence file card
+│   ├── metric-badge.tsx            # Status badges
+│   ├── hash-display.tsx            # Copyable hash with truncation
+│   └── empty-state.tsx             # No data placeholder
+├── tables/
+│   ├── data-table.tsx              # Reusable shadcn DataTable
+│   ├── cases-table.tsx             # Cases-specific columns
+│   └── files-table.tsx             # Files-specific columns
+└── layout/
+    ├── dashboard-shell.tsx         # Layout wrapper
+    ├── page-header.tsx             # Consistent page headers
+    └── sidebar-nav.tsx             # Navigation sidebar
+6. Custom Hooks Architecture
+6.1 Data Fetching Hooks (TanStack Query)
+typescript
+hooks/queries/
+├── use-cases.ts
+│   ├── useCases()                  # Fetch all user's cases
+│   ├── useCase(id)                 # Fetch single case
+│   ├── useCreateCase()             # Mutation: create case
+│   ├── useUpdateCase()             # Mutation: update case
+│   └── useDeleteCase()             # Mutation: soft delete
+├── use-chain-of-custody.ts
+│   ├── useFileChain(caseId, fileHash)      # Fetch COC for file
+│   ├── useCaseChain(caseId)                # Fetch all COC for case
+│   ├── useRecordCOCEvent()                 # Mutation: record event
+│   └── useVerifyChainIntegrity()           # Query: verify chain
+├── use-evidence-tags.ts
+│   ├── useFileTags(caseId, fileHash)       # Fetch tags for file
+│   ├── useCaseTagsAutocomplete(caseId)     # All tags for autocomplete
+│   ├── useCreateTag()                      # Mutation: create tag
+│   └── useDeleteTag()                      # Mutation: remove tag
+├── use-search.ts
+│   ├── useFileSearch(caseId, query, filters) # Full-text search
+│   ├── useAdvancedSearch()                   # Complex filters
+│   └── useSearchSuggestions(query)           # Autocomplete
+└── use-reports.ts
+    ├── useReportHistory(caseId)              # Past reports
+    ├── useGenerateReport()                   # Mutation: generate
+    └── useDownloadReport(reportId)           # Download existing
+6.2 Business Logic Hooks
+typescript
+hooks/business/
+├── use-file-analysis.ts            # Client-side hash + metadata extraction
+├── use-coc-service.ts              # COC signature generation logic
+├── use-report-generator.ts         # Report building logic
+├── use-bulk-operations.ts          # Batch processing for files
+└── use-validation.ts               # Form validation schemas
+6.3 UI State Hooks
+typescript
+hooks/state/
+├── use-file-selection.ts           # Multi-select state for files
+├── use-search-filters.ts           # Search filter state
+├── use-report-config.ts            # Report generation config
+└── use-upload-queue.ts             # File upload queue management
+7. API & Service Layer Specifications
+7.1 Client-Side Services (Utility Classes)
+ChainOfCustodyService
+
+typescript
+Purpose: Handle all COC operations
+Methods:
+  - recordEvent(eventData): Promise<boolean>
+    - Fetch last signature for file
+    - Generate new signature (SHA-256 of event + previous)
+    - Insert to Supabase
+    - Return success status
+  
+  - getFileChain(caseId, fileHash): Promise<COCEvent[]>
+    - Fetch all events for specific file
+    - Order by timestamp ASC
+  
+  - verifyChainIntegrity(caseId, fileHash): Promise<IntegrityResult>
+    - Fetch full chain
+    - Iterate and verify each signature
+    - Check previous_signature links
+    - Return { isValid, errors[] }
+  
+  - generateCertificate(caseId, fileHash): Promise<COCCertificate>
+    - Fetch chain + verify integrity
+    - Build certificate object with metadata
+    - Include QR code or cert ID
+  
+  - getClientIP(): Promise<string>
+    - Call ipify.org or similar API
+    - Fallback to 'unknown' on error
+ReportGeneratorService
+
+typescript
+Purpose: Generate reports in multiple formats
+Methods:
+  - generatePDF(reportData): Promise<Blob>
+    - Use jsPDF + autoTable
+    - Build multi-page report
+    - Include: case info, file list, metadata tables, COC per file
+    - Add headers/footers with branding
+  
+  - generateJSON(reportData): Blob
+    - Serialize to pretty-printed JSON
+    - Include all metadata and COC
+  
+  - generateCSV(reportData): Blob
+    - Flatten to CSV rows
+    - Headers: File Name, Type, Size, Hash, Tags, Analysis Date
+  
+  - formatMetadata(metadata): string[][]
+    - Convert object to [key, value] pairs for tables
+    - Handle nested objects
+SearchService
+
+typescript
+Purpose: Handle search operations
+Methods:
+  - indexFile(fileData): Promise<void>
+    - Insert/update in file_search_index
+    - Flatten metadata to searchable text
+  
+  - search(caseId, query): Promise<SearchResult[]>
+    - Full-text search using PostgreSQL tsvector
+    - Return ranked results
+  
+  - advancedSearch(caseId, filters): Promise<SearchResult[]>
+    - Build complex query with multiple filters
+    - Support: fileType, sizeRange, dateRange, tags
+  
+  - getSuggestions(query): Promise<string[]>
+    - Return autocomplete suggestions
+    - Based on: existing tags, common metadata fields
+FileAnalysisService
+
+typescript
+Purpose: Client-side file analysis
+Methods:
+  - generateHash(file, algorithm): Promise<string>
+    - Use Web Crypto API
+    - Support: SHA-256, SHA-512, MD5 (via library)
+  
+  - extractMetadata(file): Promise<MetadataObject>
+    - Use ExifReader for images
+    - Extract: filename, size, type, lastModified
+    - Parse EXIF data if image
+  
+  - batchAnalyze(files[]): AsyncGenerator<AnalysisResult>
+    - Process files one at a time
+    - Yield results progressively
+    - Handle errors per file (don't fail entire batch)
+7.2 Supabase Client Configuration
+typescript
+Purpose: Configured Supabase client for auth + data
+Features:
+  - Auto-refresh auth tokens
+  - Row Level Security enabled
+  - Type-safe query builder
+  - Real-time subscriptions (for future features)
+  
+Usage Pattern:
+  - Create client in each hook
+  - Use react-query for caching
+  - Optimistic updates for mutations
+8. Type Definitions & Interfaces
+8.1 Core Domain Types
+typescript
+// Case Management
+interface Case {
+  id: string;
+  caseNumber: string;              // CASE-YYYYMMDD-XXXX
+  caseName: string;
+  caseOfficer: string;
+  department: string;
+  caseStatus: 'active' | 'closed' | 'archived';
+  description?: string;
+  totalFiles: number;
+  totalSize: number;               // bytes
+  userId: string;
+  createdAt: string;
+  updatedAt: string;
+  closedAt?: string;
+}
+
+// Chain of Custody
+interface COCEvent {
+  id: string;
+  caseId: string;
+  fileName: string;
+  fileHash: string;
+  activityType: 'uploaded' | 'analyzed' | 'viewed' | 'exported' | 'tagged' | 'modified' | 'deleted';
+  userId: string;
+  userEmail: string;
+  userFullName: string;
+  ipAddress: string;
+  userAgent: string;
+  metadata: Record<string, any>;
+  digitalSignature: string;
+  previousSignature: string | null;
+  timestamp: string;
+}
+
+interface IntegrityResult {
+  isValid: boolean;
+  errors: string[];
+  totalEvents: number;
+  verifiedAt: string;
+}
+
+// Evidence Tags
+interface EvidenceTag {
+  id: string;
+  caseId: string;
+  fileHash: string;
+  tagName: string;
+  tagColor: string;
+  notes?: string;
+  createdBy: string;
+  createdAt: string;
+}
+
+// Search Index
+interface FileSearchRecord {
+  id: string;
+  caseId: string;
+  fileHash: string;
+  fileName: string;
+  fileType: string;
+  fileSize: number;
+  fileExtension: string;
+  metadataText: string;            // Flattened for search
+  tags: string[];
+  analyzedAt: string;
+  indexedAt: string;
+}
+
+// File Analysis
+interface AnalysisResult {
+  fileName: string;
+  fileSize: number;
+  fileType: string;
+  hashes: {
+    sha256: string;
+    md5: string;
+  };
+  metadata: {
+    basic: {
+      lastModified: string;
+      extension: string;
+    };
+    exif?: Record<string, any>;    // For images
+    custom?: Record<string, any>;
+  };
+  analyzedAt: string;
+}
+
+// Reports
+interface ReportData {
+  caseInfo: {
+    caseNumber: string;
+    caseName: string;
+    caseOfficer: string;
+    department: string;
+    dateOpened: string;
+  };
+  files: Array<{
+    fileName: string;
+    fileHash: string;
+    fileSize: number;
+    fileType: string;
+    analysisDate: string;
+    metadata: any;
+    tags: string[];
+    chainOfCustody?: COCEvent[];   // Optional inclusion
+  }>;
+  summary: {
+    totalFiles: number;
+    totalSize: number;
+    analysisCompletedAt: string;
+    generatedBy: string;
+  };
+  includeCOC: boolean;
+}
+
+interface ReportExport {
+  id: string;
+  caseId: string;
+  reportType: 'pdf' | 'json' | 'csv';
+  fileName: string;
+  fileSize: number;
+  includesCOC: boolean;
+  fileCount: number;
+  generatedBy: string;
+  generatedAt: string;
+  downloadCount: number;
+  storageUrl?: string;
+}
+
+// Search
+interface SearchFilters {
+  fileType?: string;
+  minSize?: number;
+  maxSize?: number;
+  dateFrom?: string;
+  dateTo?: string;
+  tags?: string[];
+}
+
+interface SearchResult extends FileSearchRecord {
+  matchRank?: number;              // Search relevance score
+  highlightedText?: string;        // Search term highlighting
+}
+9. Validation & Business Rules
+9.1 Form Validation Schemas (Zod)
+typescript
+Case Creation:
+  - caseName: min 3, max 200 chars, required
+  - caseOfficer: min 2, max 100 chars, required
+  - department: max 100 chars, optional
+  - description: max 2000 chars, optional
+  
+Tag Creation:
+  - tagName: min 1, max 50 chars, required, trim whitespace
+  - tagColor: valid hex color, default '#7C3AED'
+  - notes: max 500 chars, optional
+  
+Search Filters:
+  - minSize: positive integer, optional
+  - maxSize: positive integer, greater than minSize if both present
+  - dateFrom: valid ISO date, optional
+  - dateTo: valid ISO date, after dateFrom if both present
+9.2 Business Logic Rules
+Chain of Custody:
+
+First event for a file has previous_signature = null
+
+All subsequent events must link to previous event's signature
+
+Signatures are immutable - never update, only insert
+
+Verification fails if any signature mismatch or broken link
+
+Case Management:
+
+Case numbers are unique and auto-generated
+
+Cases can be closed but not deleted (soft delete sets status='archived')
+
+Closing a case requires confirmation if files exist
+
+Reopening a case resets closedAt to null
+
+Evidence Tagging:
+
+Same tag name can be used multiple times (not unique constraint)
+
+Tag colors default to brand secondary if not provided
+
+Deleting a tag doesn't affect file_search_index.tags array (eventual consistency)
+
+Tags are case-scoped (can't apply tags across cases)
+
+Search & Indexing:
+
+Files are indexed immediately after analysis
+
+Search index is updated when tags are added/removed
+
+Full-text search uses PostgreSQL's tsvector (English stemming)
+
+Search results are paginated (20 per page default)
+
+Report Generation:
+
+PDF reports include branding (logo, colors) on every page
+
+COC inclusion is optional (checkbox in UI)
+
+Reports are generated client-side for <100 files
+
+Large reports (>100 files) should show progress indicator
+
+Generated reports are tracked in report_exports table
+
+File Size Limits:
+
+Client-side analysis: up to 500MB per file (browser memory limit)
+
+Batch upload: max 50 files at once
+
+Hash generation: show progress for files >10MB
+
+10. UI/UX Specifications
+10.1 Responsive Design Breakpoints
+css
+Mobile First Strategy:
+- Base (< 640px): Single column, stacked layouts, full-width cards
+- sm (640px+): Two columns for grids, larger touch targets
+- md (768px+): Three columns, data tables replace cards
+- lg (1024px+): Sidebar visible, four column grids
+- xl (1280px+): Wide layouts, five column grids
+- 2xl (1536px+): Max container width, extra whitespace
+10.2 Component States
+Loading States:
+
+Skeleton screens for initial page loads
+
+Spinner overlays for mutations
+
+Progress bars for batch operations
+
+Inline spinners for lazy-loaded sections
+
+Empty States:
+
+Friendly illustrations with CTAs
+
+Examples: "No cases yet - Create your first case"
+
+Action buttons prominently displayed
+
+Error States:
+
+Toast notifications for transient errors (network, validation)
+
+Inline error messages for form fields
+
+Error boundaries for component crashes
+
+Fallback UI with retry button
+
+Success States:
+
+Toast notifications with checkmark icon
+
+Temporary badges (e.g., "Saved" badge fades after 2s)
+
+Optimistic UI updates (instant feedback)
+
+10.3 Animation & Transitions
+Micro-interactions:
+
+Hover effects: scale(1.05), color transitions
+
+Active states: scale(0.98) on click
+
+Loading: pulse, spin animations
+
+Toast notifications: slide in from top-right
+
+Page Transitions:
+
+Fade in on initial render (0.3s ease)
+
+Slide up for modals/drawers (0.2s ease-out)
+
+No transitions for data table updates (instant)
+
+Accessibility:
+
+Respect prefers-reduced-motion
+
+Focus visible outlines (2px brand-secondary)
+
+Keyboard navigation for all interactive elements
+
+10.4 Mobile-Specific Patterns
+Navigation:
+
+Bottom tab bar for primary actions (mobile)
+
+Hamburger menu for secondary navigation
+
+Breadcrumbs hidden on mobile
+
+Data Tables:
+
+Convert to card view on mobile
+
+Swipe actions for quick operations
+
+Pull-to-refresh for data updates
+
+Forms:
+
+Full-screen on mobile (<md)
+
+Sticky action buttons at bottom
+
+Auto-scroll to validation errors
+
+11. Performance Optimization Requirements
+11.1 Frontend Optimizations
+React Query Configuration:
+
+typescript
+Cache Strategy:
+  - Cases: 5 minute cache, stale-while-revalidate
+  - COC events: 10 minute cache (rarely change)
+  - Search results: 2 minute cache (frequent updates)
+  - Tags: 5 minute cache with optimistic updates
+
+Prefetching:
+  - Prefetch case details on cases list hover
+  - Prefetch COC data when viewing file details
+  - Prefetch next page of search results
+Code Splitting:
+
+typescript
+Lazy Load:
+  - ReportGeneratorView (only when navigating to /reports)
+  - ChartComponents (for analytics dashboard)
+  - PDFViewer (only when generating PDF preview)
+  
+Route-based Splitting:
+  - Each page is a separate bundle
+  - Shared components in common chunk
+Debouncing & Throttling:
+
+typescript
+Debounce (wait 300ms):
+  - Search input
+  - Filter changes
+  - Auto-save forms
+
+Throttle (max once per 100ms):
+  - Scroll handlers
+  - Window resize handlers
+11.2 Database Optimizations
+Query Patterns:
+
+Always filter by user_id first (RLS + index)
+
+Use pagination for lists (limit 20, offset N)
+
+Fetch only needed columns (select specific fields)
+
+Use joins sparingly (prefer multiple queries + client-side join)
+
+Indexes:
+
+All foreign keys indexed
+
+Composite indexes for common filter combinations
+
+GIN indexes for full-text search fields
+
+11.3 Client-Side Caching
+IndexedDB Strategy:
+
+typescript
+Cache for Offline:
+  - Recent cases (last 10 accessed)
+  - File analysis results (last 50 files)
+  - User settings
+
+Cache Invalidation:
+  - On successful mutation to Supabase
+  - Manual refresh button
+  - Time-based (24 hours)
+12. Error Handling & User Feedback
+12.1 Error Classification
+Network Errors:
+
+Detection: fetch fails, timeout
+
+User Message: "Connection lost. Retrying..."
+
+Action: Exponential backoff retry (3 attempts)
+
+Fallback: Show cached data with offline banner
+
+Validation Errors:
+
+Detection: Zod schema validation failure
+
+User Message: Field-specific inline errors
+
+Action: Highlight invalid fields, focus first error
+
+Prevent: Submit button disabled until valid
+
+Permission Errors:
+
+Detection: Supabase RLS rejection (403)
+
+User Message: "You don't have permission to access this case"
+
+Action: Redirect to cases list
+
+Log: Sentry error tracking
+
+Server Errors (500):
+
+Detection: HTTP 500 response
+
+User Message: "Something went wrong. Our team has been notified."
+
+Action: Show error boundary with retry button
+
+Log: Sentry with full stack trace
+
+12.2 Loading States
+typescript
+Query Loading:
+  - Show skeleton on initial load
+  - Show previous data + spinner on refetch
+  - Show "Updating..." text if stale data visible
+
+Mutation Loading:
+  - Disable action button
+  - Show spinner in button
+  - Display "Saving..." text
+  - Use optimistic updates for instant feedback
+
+Bulk Operations:
+  - Show modal with progress bar
+  - Display "Processing X of Y files..."
+  - Allow cancellation (AbortController)
+  - Show summary on completion
+12.3 User Feedback Patterns
+Toast Notifications:
+
+Position: Top-right corner
+
+Duration: 3s for success, 5s for errors, indefinite for loading
+
+Actions: Dismiss button, optional action button (e.g., "View Report")
+
+Stacking: Max 3 visible, queue overflow
+
+Confirmation Dialogs:
+
+Trigger: Destructive actions (delete, close case)
+
+Content: Clear explanation of consequences
+
+Actions: "Cancel" (default focus) and "Confirm" (danger styling)
+
+Accessibility: Trap focus, close on Escape
+
+Inline Validation:
+
+Trigger: onBlur for each field
+
+Display: Error message below field with icon
+
+Styling: Red border, red text
+
+Recovery: Auto-hide on valid input
+
+13. Testing Requirements
+13.1 Unit Tests
+Test Coverage:
+
+All hooks (queries, mutations, business logic)
+
+Utility functions (hash generation, signature verification)
+
+Form validation schemas
+
+Service classes (ChainOfCustodyService, ReportGenerator)
+
+Tools:
+
+Vitest for test runner
+
+React Testing Library for components
+
+MSW for API mocking
+
+13.2 Integration Tests
+Critical Flows:
+
+Complete file analysis flow (upload → analyze → save → verify COC)
+
+Report generation (select case → configure → generate → download)
+
+Search with filters (input query → apply filters → view results)
+
+Tools:
+
+Playwright or Cypress
+
+Test against Supabase local instance
+
+13.3 E2E Tests
+Happy Paths:
+
+New user signs up → creates first case → uploads evidence → generates report
+
+Existing user searches files → tags evidence → exports CSV
+
+Edge Cases:
+
+Network interruption during upload
+
+Concurrent edits to same case
+
+Chain integrity verification with tampered data
+
+14. Critical Implementation Notes
+14.1 Security Considerations
+Authentication:
+
+Use Clerk middleware for all dashboard routes
+
+Store Clerk user ID (not email) as foreign key
+
+Never trust client-provided user IDs
+
+Authorization:
+
+Enforce Row Level Security in Supabase
+
+Validate permissions server-side (RLS policies)
+
+Hide sensitive data in COC (mask IP addresses partially)
+
+Data Integrity:
+
+COC signatures prevent tampering
+
+Use transactions for multi-step operations
+
+Validate file hashes on verification
+
+14.2 Clerk Integration
+User Data Flow:
+
+typescript
+User signs in with Clerk
+→ Clerk webhook creates user record (if needed)
+→ Store Clerk user ID in cases.user_id
+→ Use useUser() hook to get current user
+→ Include user metadata in COC events
+Session Management:
+
+Clerk handles token refresh automatically
+
+Use getToken() for Supabase auth
+
+Sync Clerk session to Supabase auth
+
+14.3 Supabase Configuration
+Environment Variables:
+
+text
+NEXT_PUBLIC_SUPABASE_URL
+NEXT_PUBLIC_SUPABASE_ANON_KEY
+SUPABASE_SERVICE_ROLE_KEY (server-side only)
+RLS Policies:
+
+Enable RLS on all tables
+
+Create policies for SELECT, INSERT, UPDATE, DELETE
+
+Use auth.uid() for user identification
+
+Test policies thoroughly (disable in dev, enable in prod)
+
+14.4 Deployment Checklist
+Pre-deployment:
+
+Run TypeScript type checking (no errors)
+
+Run all tests (100% pass rate)
+
+Build production bundle (no warnings)
+
+Test on Vercel preview deploy
+
+Supabase Setup:
+
+Run all SQL migrations
+
+Enable RLS on all tables
+
+Create policies for each table
+
+Test with test user account
+
+Environment Variables:
+
+Set all required env vars in Vercel
+
+Verify Clerk keys (prod vs dev)
+
+Verify Supabase keys
+
+Post-deployment:
+
+Verify landing page loads
+
+Test sign-up flow
+
+Create test case and upload file
+
+Generate test report
+
+Monitor Sentry for errors
+
+15. Code Generation Guidelines for Claude Code
+When generating code from this specification:
+
+15.1 Type Safety Requirements
+Strict TypeScript:
+
+Enable strict mode in tsconfig.json
+
+Define interfaces for all data structures
+
+Use Zod for runtime validation
+
+No any types (use unknown or proper types)
+
+Use generics for reusable components
+
+15.2 Component Patterns
+Composition Over Inheritance:
+
+Break large components into smaller pieces
+
+Use children props for flexibility
+
+Create wrapper components for common patterns
+
+Server vs Client Components:
+
+Default to Server Components (async data fetching)
+
+Mark interactive components with 'use client'
+
+Minimize client bundle size
+
+Hooks Usage:
+
+Custom hooks for reusable logic
+
+Use React Query for server state
+
+Use useState/useReducer for UI state
+
+Avoid prop drilling (use composition or context)
+
+15.3 Styling Conventions
+Tailwind CSS:
+
+Use utility classes (no custom CSS unless necessary)
+
+Extract repeated patterns to components
+
+Use @apply sparingly (prefer utilities)
+
+Follow responsive design patterns (mobile-first)
+
+shadcn/ui:
+
+Use provided components (Button, Card, Dialog, etc.)
+
+Customize via Tailwind classes
+
+Extend with Radix UI primitives for complex interactions
+
+15.4 File Organization
+Naming Conventions:
+
+Components: PascalCase (e.g., ChainOfCustodyPanel.tsx)
+
+Hooks: camelCase with use prefix (e.g., useFileAnalysis.ts)
+
+Utilities: camelCase (e.g., formatBytes.ts)
+
+Types: PascalCase (e.g., Case, COCEvent)
+
+Import Order:
+
+React imports
+
+Third-party libraries
+
+Internal components
+
+Internal hooks
+
+Internal utilities
+
+Types
+
+Styles
+
+15.5 Error Boundaries
+Wrap Critical Sections:
+
+Each major feature in error boundary
+
+Provide fallback UI with retry
+
+Log errors to Sentry
+
+Show user-friendly messages
+
+15.6 Accessibility
+WCAG 2.1 Level AA:
+
+All interactive elements keyboard accessible
+
+ARIA labels for icon-only buttons
+
+Focus management for modals/dialogs
+
+Color contrast ratio 4.5:1 minimum
+
+Screen reader tested
+
+15.7 Performance Checklist
+Before Committing:
+
+No console.log statements
+
+Images optimized (WebP format)
+
+Lazy load non-critical components
+
+Memoize expensive calculations
+
+Test on slow 3G network
+
+16. Step-by-Step Implementation Order
+Phase 1: Foundation (Database + Auth)
+
+Create Supabase tables (cases, chain_of_custody, evidence_tags, file_search_index)
+
+Set up RLS policies
+
+Configure Clerk integration
+
+Create TypeScript types for all tables
+
+Phase 2: Rebrand (Visual Identity)
+5. Update Tailwind config with new colors
+6. Create new logo and favicon
+7. Build new landing page
+8. Update dashboard layout and navigation
+
+Phase 3: Feature 1 - Chain of Custody
+9. Create ChainOfCustodyService class
+10. Build COC event recording on all user actions
+11. Implement chain verification logic
+12. Build ChainOfCustodyPanel component
+13. Add certificate download functionality
+
+Phase 4: Feature 2 - Report Generation
+14. Create ReportGeneratorService class
+15. Implement PDF generation with jsPDF
+16. Build JSON and CSV exporters
+17. Create ReportGenerationView UI
+18. Add report history tracking
+
+Phase 5: Feature 3 - Search & Tagging
+19. Create SearchService class
+20. Build file indexing on upload
+21. Implement full-text search
+22. Create TagService class
+23. Build SearchPanel component
+24. Add bulk tagging functionality
+
+Phase 6: Polish & Testing
+25. Add loading states and animations
+26. Implement error handling throughout
+27. Write unit tests for critical functions
+28. E2E test all major flows
+29. Performance optimization pass
+30. Deploy to Vercel
+
+17. Success Criteria
+Project is complete when:
+
+✅ All Supabase tables created with correct schema
+✅ RLS policies tested and working
+✅ Complete visual rebrand (no trace of old branding)
+✅ Chain of Custody records all user actions
+✅ Chain integrity verification works correctly
+✅ COC certificates downloadable as JSON
+✅ PDF reports generate with branding and COC
+✅ JSON and CSV exports working
+✅ Full-text search functional with <500ms latency
+✅ Advanced filters working (type, size, date, tags)
+✅ Tagging system complete with color picker
+✅ Bulk operations working (tag 50+ files)
+✅ All forms validated with helpful error messages
+✅ Responsive design tested on mobile, tablet, desktop
+✅ No TypeScript errors
+✅ No console warnings in production
+✅ Lighthouse score >90 (Performance, Accessibility, Best Practices)
+✅ Successfully deployed to Vercel
+✅ Documentation updated in README

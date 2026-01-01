@@ -115,4 +115,7 @@ export interface ReportOptions {
   examinerName?: string;
   notes?: string;
   logo?: string;
-} 
+}
+
+// Export all new CaseVault Pro types
+export * from './database'; 

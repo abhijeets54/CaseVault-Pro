@@ -24,11 +24,20 @@ export function formatBytes(bytes: number, decimals = 2) {
 /**
  * Format date to human-readable format
  */
-export function formatDate(date: Date) {
-  return new Intl.DateTimeFormat("en-US", {
-    dateStyle: "medium",
-    timeStyle: "short",
-  }).format(date);
+export function formatDate(date: Date | string | number) {
+  try {
+    const dateObj = date instanceof Date ? date : new Date(date);
+    if (isNaN(dateObj.getTime())) {
+      return "Invalid Date";
+    }
+    return new Intl.DateTimeFormat("en-US", {
+      dateStyle: "medium",
+      timeStyle: "short",
+    }).format(dateObj);
+  } catch (error) {
+    console.error("Error formatting date:", error, date);
+    return "Invalid Date";
+  }
 }
 
 /**

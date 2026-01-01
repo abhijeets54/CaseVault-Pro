@@ -8,9 +8,9 @@ export default function SignInPage() {
         {/* Branding Section */}
         <div className="w-full max-w-md px-6 py-12 md:py-24 text-center md:text-left text-white">
           <div className="mb-8">
-            <h1 className="text-4xl font-bold mb-3">Digital Evidence Metadata Viewer</h1>
+            <h1 className="text-4xl font-bold mb-3">CaseVault Pro</h1>
             <p className="text-lg opacity-80">
-              Securely analyze files, extract metadata, and generate forensic reports - all from your browser.
+              Digital Evidence Intelligence Platform - Securely manage cases, maintain chain of custody, and generate professional forensic reports.
             </p>
           </div>
           

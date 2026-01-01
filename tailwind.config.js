@@ -15,16 +15,34 @@ module.exports = {
         ring: "hsl(var(--ring))",
         background: "hsl(var(--background))",
         foreground: "hsl(var(--foreground))",
+        // CaseVault Pro Brand Colors
+        brand: {
+          primary: "#0F172A", // Slate-900 (deep navy)
+          secondary: "#7C3AED", // Violet-600 (purple)
+          accent: "#F59E0B", // Amber-500 (gold)
+          success: "#10B981", // Emerald-500
+          warning: "#F59E0B", // Amber-500
+          danger: "#EF4444", // Red-500
+          info: "#3B82F6", // Blue-500
+          background: "#F8FAFC", // Slate-50
+          cardBg: "#FFFFFF", // White
+          border: "#E2E8F0", // Slate-200
+          muted: "#64748B", // Slate-500
+          darkBg: "#0F172A", // Slate-900
+          darkCard: "#1E293B", // Slate-800
+          darkBorder: "#334155", // Slate-700
+        },
+        // Keep forensic for backward compatibility (deprecated)
         forensic: {
-          DEFAULT: "#1e3a8a", // Dark blue base
-          light: "#3b82f6", // Lighter blue
-          dark: "#172554", // Very dark blue
-          accent: "#0ea5e9", // Blue accent
-          muted: "#bfdbfe", // Very light blue
-          success: "#10b981", // Green for successful operations
-          warning: "#f59e0b", // Amber for warnings
-          error: "#ef4444", // Red for errors
-          highlight: "#3b82f6", // Highlight color
+          DEFAULT: "#0F172A",
+          light: "#7C3AED",
+          dark: "#0F172A",
+          accent: "#F59E0B",
+          muted: "#64748B",
+          success: "#10B981",
+          warning: "#F59E0B",
+          error: "#EF4444",
+          highlight: "#7C3AED",
         },
         primary: {
           DEFAULT: "hsl(var(--primary))",
@@ -114,12 +132,20 @@ module.exports = {
         "progress-bar": "progress-bar 2s ease-in-out",
       },
       backgroundImage: {
-        'grid-pattern': 'linear-gradient(rgba(99, 102, 241, 0.05) 1px, transparent 1px), linear-gradient(to right, rgba(99, 102, 241, 0.05) 1px, transparent 1px)',
-        'forensic-gradient': 'linear-gradient(to right, #1e3a8a, #3b82f6)',
-        'grid-overlay': 'radial-gradient(rgba(99, 102, 241, 0.1) 1px, transparent 1px)',
+        'grid-pattern': 'linear-gradient(rgba(124, 58, 237, 0.05) 1px, transparent 1px), linear-gradient(to right, rgba(124, 58, 237, 0.05) 1px, transparent 1px)',
+        'brand-gradient': 'linear-gradient(135deg, #0F172A 0%, #1E293B 50%, #0F172A 100%)',
+        'brand-gradient-vertical': 'linear-gradient(to bottom, #0F172A, #1E293B)',
+        'accent-gradient': 'linear-gradient(to right, #7C3AED, #F59E0B)',
+        'grid-overlay': 'radial-gradient(rgba(124, 58, 237, 0.1) 1px, transparent 1px)',
+        'dot-pattern': 'radial-gradient(circle, rgba(124, 58, 237, 0.15) 1px, transparent 1px)',
       },
       backgroundSize: {
         'grid': '32px 32px',
+        'dots': '24px 24px',
+      },
+      fontFamily: {
+        sans: ['Inter', 'system-ui', 'sans-serif'],
+        mono: ['JetBrains Mono', 'Courier New', 'monospace'],
       },
     },
   },

@@ -15,7 +15,7 @@ export default function Loading() {
         animate={{ opacity: 1, scale: 1 }}
         transition={{ duration: 0.5 }}
       >
-        <Loader variant="forensic" size="lg" text="Analyzing Digital Evidence..." />
+        <Loader variant="forensic" size="lg" text="Loading CaseVault Pro..." />
         
         <motion.div 
           className="mt-8 text-sm text-gray-500 max-w-md text-center"

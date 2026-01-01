@@ -1,0 +1,43 @@
+{
+  "case_number": "CASE-20251220-0001",
+  "suspect": {
+    "name": "John Doe",
+    "alias": "Johnny D",
+    "age": 32,
+    "date_of_birth": "1993-03-15",
+    "gender": "Male",
+    "height": "5'10\"",
+    "weight": "180 lbs",
+    "distinguishing_marks": {
+      "tattoo_1": "Cross on left wrist",
+      "tattoo_2": "Rose on right forearm"
+    }
+  },
+  "criminal_history": [
+    {
+      "date": "2019-05-10",
+      "offense": "Burglary",
+      "location": "Queens, NY",
+      "sentence": "3 years"
+    },
+    {
+      "date": "2022-08-22",
+      "offense": "Burglary",
+      "location": "Brooklyn, NY",
+      "sentence": "4 years"
+    }
+  ],
+  "known_associates": [
+    {
+      "name": "Michael Garcia",
+      "alias": "Wheels",
+      "relationship": "Accomplice",
+      "status": "At large"
+    }
+  ],
+  "apprehension": {
+    "date": "2025-12-24",
+    "time": "10:30 UTC",
+    "location": "Grand Central Terminal"
+  }
+}
